@@ -1,0 +1,9 @@
+streamlit==1.28.0
+langchain==0.1.0
+langchain-google-genai==0.0.5
+langchain-experimental==0.0.47
+pymysql==1.1.0
+sentence-transformers==2.2.2
+chromadb==0.4.18
+python-dotenv==1.0.0
+SQLAlchemy==2.0.23
