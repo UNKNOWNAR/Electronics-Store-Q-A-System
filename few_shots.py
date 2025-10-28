@@ -9,7 +9,7 @@ few_shots = [
         'Question': "What is the total price of all laptops in inventory?",
         'SQLQuery': "SELECT SUM(price * stock_quantity) FROM products WHERE category = 'Laptop'",
         'SQLResult': "Result of the SQL query",
-        'Answer': "285890"
+        'Answer': "243257"
     },
     {
         'Question': "If we sell all Apple products today with discounts applied, how much revenue will our store generate?",
@@ -19,7 +19,7 @@ FROM (SELECT SUM(price * stock_quantity) as total_amount, product_id
       GROUP BY product_id) a 
 LEFT JOIN discounts ON a.product_id = discounts.product_id""",
         'SQLResult': "Result of the SQL query",
-        'Answer': "267038.25"
+        'Answer': "267397.50"
     },
     {
         'Question': "How many headphones are available across all brands?",
@@ -31,7 +31,7 @@ LEFT JOIN discounts ON a.product_id = discounts.product_id""",
         'Question': "What is the total inventory value of all products?",
         'SQLQuery': "SELECT SUM(price * stock_quantity) FROM products",
         'SQLResult': "Result of the SQL query",
-        'Answer': "1847541"
+        'Answer': "963477"
     },
     {
         'Question': "Which products have discounts greater than 10%?",
@@ -41,7 +41,7 @@ JOIN discounts d ON p.product_id = d.product_id
 WHERE d.pct_discount > 10 
 ORDER BY d.pct_discount DESC""",
         'SQLResult': "Result of the SQL query",
-        'Answer': "Dell Inspiron 15, Lenovo IdeaPad 3, Samsung Galaxy Tab A8, Garmin Forerunner 265, HP Pavilion 15, JBL Live Pro 2"
+        'Answer': "Lenovo IdeaPad 3, Dell Inspiron 15, Microsoft Surface Go 3, Samsung Galaxy Watch 6, HP Pavilion 15, Bose QuietComfort Ultra"
     },
     {
         'Question': "How much revenue will we generate if we sell all Dell laptops without discounts?",
@@ -53,13 +53,13 @@ ORDER BY d.pct_discount DESC""",
         'Question': "What is the average price of all smartwatches?",
         'SQLQuery': "SELECT AVG(price) FROM products WHERE category = 'Smartwatch'",
         'SQLResult': "Result of the SQL query",
-        'Answer': "417"
+        'Answer': "440.67"
     },
     {
         'Question': "How many products does Apple have across all categories?",
         'SQLQuery': "SELECT COUNT(*) FROM products WHERE brand = 'Apple'",
         'SQLResult': "Result of the SQL query",
-        'Answer': "8"
+        'Answer': "9"
     },
     {
         'Question': "If we sell all discounted products today, how much total revenue will we generate after applying discounts?",
@@ -67,6 +67,6 @@ ORDER BY d.pct_discount DESC""",
 FROM products p 
 JOIN discounts d ON p.product_id = d.product_id""",
         'SQLResult': "Result of the SQL query",
-        'Answer': "179847.50"
+        'Answer': "300491.80"
     }
 ]
