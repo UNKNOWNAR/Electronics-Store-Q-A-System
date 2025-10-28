@@ -47,7 +47,7 @@ ORDER BY d.pct_discount DESC""",
         'Question': "How much revenue will we generate if we sell all Dell laptops without discounts?",
         'SQLQuery': "SELECT SUM(price * stock_quantity) FROM products WHERE brand = 'Dell' AND category = 'Laptop'",
         'SQLResult': "Result of the SQL query",
-        'Answer': "70470"
+        'Answer': "70425"
     },
     {
         'Question': "What is the average price of all smartwatches?",
