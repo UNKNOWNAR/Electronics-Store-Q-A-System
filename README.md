@@ -57,9 +57,6 @@ source venv/bin/activate
 ### 3. Install Dependencies
 ```bash
 # Install all requirements
-pip install -r streamlit_requirements.txt
-
-# Or install specific requirements
 pip install -r requirements.txt
 ```
 
@@ -88,14 +85,7 @@ python database_setup.py
 
 ### 6. Launch the Application
 ```bash
-# Easy launcher (recommended)
-python run_streamlit.py
-
-# Or directly with Streamlit
 streamlit run main.py
-
-# Or use the Windows batch file
-launch_app.bat
 ```
 
 The app will open at `http://localhost:8501`
@@ -110,11 +100,7 @@ Electronics-Store-Q-A-System/
 ├── few_shots.py                     # Example questions and SQL
 ├── config.py                        # Configuration management
 ├── database_setup.py                # Database utilities
-├── demo_streamlit.py                # Interactive demo
-├── example_usage.py                 # Usage examples
-├── run_streamlit.py                 # App launcher
-├── launch_app.bat                   # Windows batch launcher
-├── streamlit_requirements.txt       # Streamlit dependencies
+├── gemini.md                        # Gemini configuration file
 ├── requirements.txt                 # Core dependencies
 ├── README.md                        # This file
 └── database/
@@ -226,35 +212,6 @@ python vector_embeddings.py
 
 # Test database connection
 python database_setup.py
-
-# Run examples
-python example_usage.py
-
-# Try the demo
-streamlit run demo_streamlit.py
-```
-
-## 🚀 Deployment
-
-### Local Development
-```bash
-python run_streamlit.py
-```
-
-### Production Deployment
-```bash
-# Using Streamlit Cloud, Heroku, or similar
-streamlit run main.py --server.port $PORT
-```
-
-### Docker (Optional)
-```dockerfile
-FROM python:3.10-slim
-COPY . /app
-WORKDIR /app
-RUN pip install -r streamlit_requirements.txt
-EXPOSE 8501
-CMD ["streamlit", "run", "main.py"]
 ```
 
 ## 🛠️ Troubleshooting
