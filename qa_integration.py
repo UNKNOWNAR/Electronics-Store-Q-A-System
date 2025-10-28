@@ -84,7 +84,7 @@ class ElectronicsQA:
         Returns:
             dict: Contains suggested SQL query and confidence score
         """
-        best_match = self.get_best_match(user_question, threshold=0.4)
+        best_match = self.get_best_match(user_question, threshold=0.5)
 
         if best_match:
             return {
