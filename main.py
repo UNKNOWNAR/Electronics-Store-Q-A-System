@@ -5,9 +5,39 @@ import psycopg2
 from sqlalchemy import create_engine, text
 import os
 from dotenv import load_dotenv
+import sys
+from urllib.parse import quote_plus
 
 # Load environment variables
 load_dotenv()
+
+def check_requirements():
+    """Check if required packages are installed"""
+    required_packages = [
+        "streamlit",
+        "pandas",
+        "chromadb",
+        "sentence_transformers",
+        "psycopg2",
+        "sqlalchemy",
+    ]
+
+    missing_packages = []
+    for package in required_packages:
+        try:
+            __import__(package)
+        except ImportError:
+            missing_packages.append(package)
+
+    if missing_packages:
+        st.error("❌ Missing required packages:")
+        for package in missing_packages:
+            st.error(f"   • {package}")
+        st.info("💡 Install missing packages with:")
+        st.code("pip install -r requirements.txt")
+        return False
+
+    return True
 
 # Page configuration
 st.set_page_config(
@@ -33,6 +63,7 @@ st.markdown(
         background-color: #d4edda;
         border: 1px solid #c3e6cb;
         margin: 1rem 0;
+        color: #000000;
     }
     .info-box {
         padding: 1rem;
@@ -55,6 +86,7 @@ st.markdown(
         padding: 1rem;
         font-family: 'Courier New', monospace;
         margin: 1rem 0;
+        color: #000000;
     }
 </style>
 """,
@@ -68,7 +100,7 @@ def initialize_qa_system():
     return ElectronicsQA()
 
 
-@st.cache_data
+@st.cache_resource
 def get_database_connection():
     """Get database connection with caching"""
     try:
@@ -82,7 +114,8 @@ def get_database_connection():
         }
 
         # Create SQLAlchemy engine
-        connection_string = f"postgresql://{db_params['user']}:{db_params['password']}@{db_params['host']}:{db_params['port']}/{db_params['database']}"
+        password = quote_plus(db_params['password'])
+        connection_string = f"postgresql://{db_params['user']}:{password}@{db_params['host']}:{db_params['port']}/{db_params['database']}"
         engine = create_engine(connection_string)
         return engine
     except Exception as e:
@@ -117,6 +150,9 @@ def main():
         unsafe_allow_html=True,
     )
 
+    if not check_requirements():
+        st.stop()
+
     # Initialize Q&A system
     with st.spinner("Initializing Q&A System..."):
         qa_system = initialize_qa_system()
@@ -128,7 +164,7 @@ def main():
         # Show collection info
         info = qa_system.embedding_manager.get_collection_info()
         st.metric("Vector Database", f"{info['total_documents']} examples")
-        st.metric("Database Path", info["db_path"])
+
 
         st.header("📊 Database Connection")
         engine = get_database_connection()
@@ -257,7 +293,7 @@ def main():
 
                                 # Show summary statistics
                                 if len(df.columns) == 1 and df.iloc[0, 0] is not None:
-                                    st.metric("Result", df.iloc[0, 0])
+                                    st.metric("Result", float(df.iloc[0, 0]))
                             else:
                                 st.warning("⚠️ Query executed but returned no results")
                         else:
@@ -283,7 +319,7 @@ def main():
                 """
             <div class="warning-box">
                 <strong>⚠️ No similar questions found</strong><br>
-                The system couldn't find a similar question in the database. 
+                The system couldn't find a similar question in the database.
                 Consider adding more examples to improve matching.
             </div>
             """,

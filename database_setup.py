@@ -6,6 +6,7 @@ import psycopg2
 from sqlalchemy import create_engine, text
 import pandas as pd
 from config import DATABASE_CONFIG
+from urllib.parse import quote_plus
 
 
 def test_database_connection():
@@ -18,7 +19,8 @@ def test_database_connection():
         conn.close()
 
         # Test with SQLAlchemy
-        connection_string = f"postgresql://{DATABASE_CONFIG['user']}:{DATABASE_CONFIG['password']}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['database']}"
+        password = quote_plus(DATABASE_CONFIG['password'])
+        connection_string = f"postgresql://{DATABASE_CONFIG['user']}:{password}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['database']}"
         engine = create_engine(connection_string)
 
         with engine.connect() as connection:
@@ -35,7 +37,8 @@ def get_database_info():
     Get basic information about the database
     """
     try:
-        connection_string = f"postgresql://{DATABASE_CONFIG['user']}:{DATABASE_CONFIG['password']}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['database']}"
+        password = quote_plus(DATABASE_CONFIG['password'])
+        connection_string = f"postgresql://{DATABASE_CONFIG['user']}:{password}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['database']}"
         engine = create_engine(connection_string)
 
         with engine.connect() as connection:
@@ -73,7 +76,8 @@ def execute_sample_queries():
     Execute some sample queries to test the database
     """
     try:
-        connection_string = f"postgresql://{DATABASE_CONFIG['user']}:{DATABASE_CONFIG['password']}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['database']}"
+        password = quote_plus(DATABASE_CONFIG['password'])
+        connection_string = f"postgresql://{DATABASE_CONFIG['user']}:{password}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['database']}"
         engine = create_engine(connection_string)
 
         sample_queries = [

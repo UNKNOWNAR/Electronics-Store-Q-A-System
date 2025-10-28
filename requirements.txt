@@ -1,9 +1,23 @@
-streamlit==1.28.0
-langchain==0.1.0
-langchain-google-genai==0.0.5
-langchain-experimental==0.0.47
-psycopg2-binary==2.9.9
+# Streamlit and UI
+streamlit==1.49.1
+pandas==2.2.3
+
+# Vector Embeddings and Database
+chromadb==1.2.0
 sentence-transformers==2.2.2
-chromadb==0.4.18
-python-dotenv==1.0.0
-SQLAlchemy==2.0.23
+transformers==4.31.0
+torch==2.0.1
+torchvision==0.15.2
+
+# Database
+psycopg2-binary==2.9.10
+SQLAlchemy==2.0.43
+
+# Utilities
+python-dotenv==1.1.1
+numpy==2.2.6
+
+# LangChain (if needed for future enhancements)
+langchain
+langchain-google-genai
+langchain-experimental
