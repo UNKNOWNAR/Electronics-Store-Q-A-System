@@ -159,11 +159,6 @@ def main():
 
     # Sidebar
     with st.sidebar:
-        st.header("🔧 System Information")
-
-        # Show collection info
-        info = qa_system.embedding_manager.get_collection_info()
-        st.metric("Vector Database", f"{info['total_documents']} examples")
 
 
         st.header("📊 Database Connection")
