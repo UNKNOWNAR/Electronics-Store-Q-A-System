@@ -296,18 +296,6 @@ def main():
             else:
                 st.warning("⚠️ Database not connected. Cannot execute SQL queries.")
 
-            # Show similar questions
-            if similar_questions:
-                st.header("🔍 Other Similar Questions")
-                for i, sim in enumerate(
-                    similar_questions[1:], 1
-                ):  # Skip first (already shown)
-                    with st.expander(
-                        f"Similar Question {i} (Similarity: {sim['similarity_score']:.1%})"
-                    ):
-                        st.write(f"**Question:** {sim['question']}")
-                        st.write(f"**Answer:** {sim['answer']}")
-                        st.code(sim["sql_query"], language="sql")
 
         else:
             st.markdown(
@@ -321,16 +309,6 @@ def main():
                 unsafe_allow_html=True,
             )
 
-            # Show similar questions anyway
-            if similar_questions:
-                st.header("🔍 Closest Matches (Low Confidence)")
-                for i, sim in enumerate(similar_questions):
-                    with st.expander(
-                        f"Match {i + 1} (Similarity: {sim['similarity_score']:.1%})"
-                    ):
-                        st.write(f"**Question:** {sim['question']}")
-                        st.write(f"**Answer:** {sim['answer']}")
-                        st.code(sim["sql_query"], language="sql")
 
     # Footer
     st.markdown("---")
