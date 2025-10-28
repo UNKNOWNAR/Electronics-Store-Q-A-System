@@ -1,7 +1,3 @@
-"""
-Integration script showing how to use the vector embeddings with your Electronics Store Q&A System
-"""
-
 from vector_embeddings import VectorEmbeddingManager
 import json
 
