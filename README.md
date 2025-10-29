@@ -10,9 +10,14 @@ This LLM-powered application enables natural language interaction with a Postgre
 
 ## 🖼️ Dashboard
 
-| Dashboard View 1 | Dashboard View 2 | Dashboard View 3 |
-|:---:"""|:---:"""|:---:"""|
-| ![Dashboard 1](dashboard-1.jpg) | ![Dashboard 2](dashboard-2.jpg) | ![Dashboard 3](dashboard-3.jpg) |
+**Dashboard View 1**
+![Dashboard 1](dashboard-1.jpg)
+
+**Dashboard View 2**
+![Dashboard 2](dashboard-2.jpg)
+
+**Dashboard View 3**
+![Dashboard 3](dashboard-3.jpg)
 
 ### ✨ Key Features
 
