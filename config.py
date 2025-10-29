@@ -22,7 +22,7 @@ VECTOR_DB_CONFIG = {"db_path": "./chroma_db", "collection_name": "electronics_qa
 
 # Similarity Search Configuration
 SIMILARITY_CONFIG = {
-    "default_threshold": 0.3,
+    "default_threshold": 0.62,
     "max_results": 5,
     "embedding_model": "all-MiniLM-L6-v2",
 }
