@@ -2,7 +2,7 @@
 
 An intelligent question-answering system that allows store managers to query their electronics inventory database using natural language. Built with **vector embeddings**, **Chroma database**, **LangChain**, **Google Gemini**, and **Streamlit**.
 
-![Electronics Store](electronics_store.png)
+
 
 ## 🎯 Project Overview
 
