@@ -101,6 +101,7 @@ def execute_sql_query(engine, query):
 
 
 def main():
+    threshold = SIMILARITY_CONFIG["default_threshold"]
     # Main header
     st.markdown(
         '<h1 class="main-header">🛒 Electronics Store Q&A System</h1>',
