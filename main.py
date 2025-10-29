@@ -120,10 +120,7 @@ def main():
         else:
             st.error("❌ Database Connection Failed")
 
-        st.header("🎯 Similarity Threshold")
-        # The threshold is now set in `config.py` and is not user-configurable.
-        threshold = SIMILARITY_CONFIG["default_threshold"]
-        st.info(f"Confidence threshold is set to {threshold:.0%}.")
+
         st.header("📝 Example Questions")
         example_questions = [
             "How many Samsung phones do we have in stock?",

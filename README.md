@@ -8,6 +8,12 @@ An intelligent question-answering system that allows store managers to query the
 
 This LLM-powered application enables natural language interaction with a PostgreSQL database containing electronics inventory, sales, and pricing data. The system uses **vector embeddings** for intelligent question matching and **few-shot learning** to generate accurate SQL queries from natural language questions.
 
+## 🖼️ Dashboard
+
+| Dashboard View 1 | Dashboard View 2 | Dashboard View 3 |
+|:---:"""|:---:"""|:---:"""|
+| ![Dashboard 1](dashboard-1.jpg) | ![Dashboard 2](dashboard-2.jpg) | ![Dashboard 3](dashboard-3.jpg) |
+
 ### ✨ Key Features
 
 - **🔍 Vector Embeddings**: Intelligent similarity search using Chroma database
@@ -143,27 +149,19 @@ Electronics-Store-Q-A-System/
 
 ## 💾 Database Schema
 
-```sql
--- Create the products table
-CREATE TABLE products (
-    product_id SERIAL PRIMARY KEY,
-    brand VARCHAR(50) NOT NULL,
-    category VARCHAR(50) NOT NULL,
-    model_name VARCHAR(100) NOT NULL,
-    specs VARCHAR(200),
-    price INT CHECK (price BETWEEN 100 AND 5000),
-    stock_quantity INT NOT NULL,
-    UNIQUE (brand, category, model_name)
-);
+### Products Table
+- `product_id` (Primary Key)
+- `brand` (Apple, Samsung, Dell, HP, Lenovo, etc.)
+- `category` (Laptop, Phone, Tablet, Headphones, etc.)
+- `model_name`
+- `specs` (Storage, RAM, etc.)
+- `price`
+- `stock_quantity`
 
--- Create the discounts table
-CREATE TABLE discounts (
-    discount_id SERIAL PRIMARY KEY,
-    product_id INT NOT NULL,
-    pct_discount DECIMAL(5,2) CHECK (pct_discount BETWEEN 0 AND 100),
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-);
-```
+### Discounts Table
+- `discount_id` (Primary Key)
+- `product_id` (Foreign Key)
+- `pct_discount`
 
 ## 🎯 Example Workflows
 
