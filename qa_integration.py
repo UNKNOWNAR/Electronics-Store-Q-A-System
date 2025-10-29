@@ -1,12 +1,47 @@
+import os
+from dotenv import load_dotenv
+from urllib.parse import quote_plus
+import textwrap  # Added this to clean up the prompt
+
 from vector_embeddings import VectorEmbeddingManager
-import json
+from few_shots import few_shots  # Import few_shots directly
+
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_community.utilities import SQLDatabase
+from langchain_core.prompts import ChatPromptTemplate  # Removed unused FewShotPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+
+# Import from your config file
+from config import DATABASE_CONFIG, SIMILARITY_CONFIG
 
 
-class ElectronicsQA:
+def getDatabaseConnection():
+    """
+    Check the database connection using settings from config.py
+    """
+    try:
+        db_user = DATABASE_CONFIG["user"]
+        db_password = quote_plus(DATABASE_CONFIG["password"])
+        db_host = DATABASE_CONFIG["host"]
+        db_port = DATABASE_CONFIG["port"]
+        db_name = DATABASE_CONFIG["database"]
+
+        db_uri = f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+        engine = SQLDatabase.from_uri(db_uri)
+        return engine
+    except Exception as e:
+        print(f"Error connecting to database: {e}")
+        return None
+
+# --- CHANGE 1: Renamed class to match main.py ---
+class ElectronicsQASystem:
     def __init__(self):
         """
-        Initialize the Electronics Q&A system with vector embeddings
+        Initialize the Electronics Q&A system with vector embeddings and LangChain/Gemini
         """
+        load_dotenv()  # Ensure environment variables are loaded
+
+        # Initialize Vector Embedding Manager for similarity search
         self.embedding_manager = VectorEmbeddingManager()
 
         # Check if we have embeddings, if not create them
@@ -15,21 +50,62 @@ class ElectronicsQA:
             print("Creating embeddings from few shots data...")
             self.embedding_manager.create_embeddings_from_few_shots()
 
-    def find_similar_questions(self, user_question, top_k=3):
+        # Initialize Google Gemini LLM
+        self.llm = ChatGoogleGenerativeAI(
+            model="gemini-2.5-flash", 
+            google_api_key=os.getenv("GOOGLE_API_KEY"),
+            temperature=0.0,
+        )
+
+        self.db = getDatabaseConnection()
+        if self.db is None:
+            raise Exception("Failed to initialize ElectronicsQA: Database connection failed.")
+
+        # Define the example prompt for few-shot learning
+        self.example_prompt = ChatPromptTemplate.from_template(
+            "Question: {Question}\nSQLQuery: {SQLQuery}\nSQLResult: {SQLResult}\nAnswer: {Answer}"
+        )
+
+        # --- CHANGE 3: Cleaned up prompt indentation ---
+        # Define the main prompt template for SQL generation
+        system_prompt = textwrap.dedent(
+            """You are an expert PostgreSQL assistant. Your goal is to write a single, syntactically correct PostgreSQL query to answer the user's question.
+
+            Use the following database schema to construct your query:
+            {schema}
+
+            Here are some rules and best practices to follow:
+            1.  **Only use tables and columns** that are explicitly listed in the schema.
+            2.  Pay close attention to **which columns belong to which tables** to ensure correct JOINs.
+            3.  For string comparisons (like brand names or categories), use `ILIKE` for case-insensitivity. For example: `WHERE brand ILIKE 'samsung'`.
+            4.  If performing calculations, use `COALESCE` to handle potential `NULL` values (e.g., `COALESCE(discounts.pct_discount, 0)`).
+            5.  **Do not** wrap your answer in markdown (e.g., ```sql ... ```).
+            6.  **Only output the SQL query** and nothing else.
+
+            Here are some examples of how to answer user questions:
+            {few_shot_examples}
+            """
+        )
+        self.sql_generation_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system_prompt),
+                ("human", "Question: {question}"),
+                ("ai", "SQL Query:"),  # This prompts the AI to respond
+            ]
+        )
+
+        # Create the LangChain chain
+        self.chain = self.sql_generation_prompt | self.llm | StrOutputParser()
+
+    def find_similar_questions(self, user_question):
         """
         Find similar questions from the few shots data
-
-        Args:
-            user_question (str): The user's question
-            top_k (int): Number of similar questions to return
-
-        Returns:
-            list: List of similar questions with metadata
         """
+        top_k = SIMILARITY_CONFIG["max_results"]
         results = self.embedding_manager.search_similar_questions(
             user_question, n_results=top_k
         )
-
+        # ... (rest of the function is correct) ...
         similar_questions = []
         if results["documents"] and results["documents"][0]:
             for i, (doc, metadata, distance) in enumerate(
@@ -44,161 +120,79 @@ class ElectronicsQA:
                     {
                         "question": metadata["question"],
                         "sql_query": metadata["sql_query"],
+                        "sql_result": metadata["sql_result"],  # Include SQLResult
                         "answer": metadata["answer"],
                         "similarity_score": similarity_score,
                         "index": metadata["index"],
                     }
                 )
-
         return similar_questions
 
-    def get_best_match(self, user_question, threshold=0.5):
+    def suggest_sql_query(self, user_question, threshold):
         """
-        Get the best matching question if similarity is above threshold
-
-        Args:
-            user_question (str): The user's question
-            threshold (float): Minimum similarity threshold (0-1)
-
-        Returns:
-            dict or None: Best match if above threshold, None otherwise
+        Suggest a SQL query using Google Gemini and LangChain,
+        leveraging top_k similar questions as few-shot examples.
         """
-        similar_questions = self.find_similar_questions(user_question, top_k=1)
+        try:
+            # 1. Find top_k similar questions using vector embeddings
+            similar_examples = self.find_similar_questions(user_question)
 
-        if similar_questions and similar_questions[0]["similarity_score"] >= threshold:
-            return similar_questions[0]
-
-        return None
-
-    def suggest_sql_query(self, user_question):
-        """
-        Suggest a SQL query based on similar questions
-
-        Args:
-            user_question (str): The user's question
-
-        Returns:
-            dict: Contains suggested SQL query and confidence score
-        """
-        best_match = self.get_best_match(user_question, threshold=0.5)
-
-        if best_match:
-            return {
-                "suggested_sql": best_match["sql_query"],
-                "confidence": best_match["similarity_score"],
-                "source_question": best_match["question"],
-                "expected_answer": best_match["answer"],
-            }
-
-        return {
-            "suggested_sql": None,
-            "confidence": 0.0,
-            "message": "No similar questions found. Consider adding more examples to few_shots.py",
-        }
-
-
-def demo_integration():
-    """
-    Demonstrate how to integrate the vector embeddings with your Q&A system
-    """
-    print("🔧 Electronics Store Q&A Integration Demo")
-    print("=" * 50)
-
-    # Initialize the Q&A system
-    qa_system = ElectronicsQA()
-
-    # Test questions
-    test_questions = [
-        "How many Samsung phones are in stock?",
-        "What's the total value of all laptops?",
-        "Show me products with big discounts",
-        "How much money can we make from Apple products?",
-        "What's the average price of smartwatches?",
-        "How many headphones do we have?",
-        "What's our total inventory worth?",
-        "How many Dell laptops can we sell?",
-    ]
-
-    for question in test_questions:
-        print(f"\n❓ User Question: '{question}'")
-        print("-" * 60)
-
-        # Get SQL suggestion
-        suggestion = qa_system.suggest_sql_query(question)
-
-        if suggestion["suggested_sql"]:
-            print(
-                f"✅ Suggested SQL Query (Confidence: {suggestion['confidence']:.3f}):"
+            # 2. CHECK THE THRESHOLD (The "Garbage Filter" Logic)
+            confidence = (
+                similar_examples[0]["similarity_score"] if similar_examples else 0.0
             )
-            print(f"   {suggestion['suggested_sql']}")
-            print(f"📋 Based on: '{suggestion['source_question']}'")
-            print(f"🎯 Expected Answer: {suggestion['expected_answer']}")
-        else:
-            print(f"❌ {suggestion['message']}")
 
-        # Show similar questions
-        similar = qa_system.find_similar_questions(question, top_k=2)
-        if similar:
-            print(f"\n🔍 Similar Questions Found:")
-            for i, sim in enumerate(similar, 1):
-                print(
-                    f"   {i}. {sim['question']} (Similarity: {sim['similarity_score']:.3f})"
+            if not similar_examples or confidence < threshold:
+                # Confidence is too low, this is "garbage" or un-matchable
+                return {
+                    "suggested_sql": None,
+                    "confidence": confidence,
+                    "message": "Confidence below threshold. No similar question found.",
+                    "source_question": None,
+                    "expected_answer": None,
+                }
+
+            # 3. Format these similar questions as few-shot examples for the LLM
+            formatted_few_shots = []
+            for example in similar_examples:
+                formatted_few_shots.append(
+                    self.example_prompt.format(
+                        Question=example["question"],
+                        SQLQuery=example["sql_query"],
+                        SQLResult=example["sql_result"],
+                        Answer=example["answer"],
+                    )
+                )
+            few_shot_examples_str = "\n\n".join(formatted_few_shots)
+
+            # 4. Get database schema
+            schema = self.db.get_table_info()
+
+            # 5. Invoke the LLM chain to generate SQL
+            generated_sql = self.chain.invoke(
+                {
+                    "schema": schema,
+                    "few_shot_examples": few_shot_examples_str,
+                    "question": user_question,
+                }
+            )
+
+            # 6. Clean up the generated SQL
+            if generated_sql.startswith("```sql"):
+                generated_sql = (
+                    generated_sql.replace("```sql", "").replace("```", "").strip()
                 )
 
-
-def interactive_demo():
-    """
-    Interactive demo where user can ask questions
-    """
-    print("\n🎮 Interactive Demo - Ask your own questions!")
-    print("Type 'quit' to exit")
-    print("=" * 50)
-
-    qa_system = ElectronicsQA()
-
-    while True:
-        user_input = input("\n❓ Enter your question: ").strip()
-
-        if user_input.lower() in ["quit", "exit", "q"]:
-            print("👋 Goodbye!")
-            break
-
-        if not user_input:
-            continue
-
-        print(f"\n🔍 Searching for similar questions...")
-        suggestion = qa_system.suggest_sql_query(user_input)
-
-        if suggestion["suggested_sql"]:
-            print(f"\n✅ Found a match! (Confidence: {suggestion['confidence']:.3f})")
-            print(f"📝 Suggested SQL:")
-            print(f"   {suggestion['suggested_sql']}")
-            print(f"📋 Based on: '{suggestion['source_question']}'")
-            print(f"🎯 Expected Answer: {suggestion['expected_answer']}")
-        else:
-            print(f"\n❌ {suggestion['message']}")
-
-            # Show similar questions anyway
-            similar = qa_system.find_similar_questions(user_input, top_k=3)
-            if similar:
-                print(f"\n🔍 Here are some similar questions:")
-                for i, sim in enumerate(similar, 1):
-                    print(
-                        f"   {i}. {sim['question']} (Similarity: {sim['similarity_score']:.3f})"
-                    )
-
-
-if __name__ == "__main__":
-    # Run the integration demo
-    demo_integration()
-
-    # Ask if user wants to try interactive mode
-    print("\n" + "=" * 50)
-    try_interactive = (
-        input("Would you like to try the interactive demo? (y/n): ").strip().lower()
-    )
-
-    if try_interactive in ["y", "yes"]:
-        interactive_demo()
-    else:
-        print("👋 Demo completed!")
+            # 7. Return the final suggestion
+            return {
+                "suggested_sql": generated_sql,
+                "confidence": confidence,
+                "source_question": similar_examples[0]["question"],
+                "expected_answer": similar_examples[0]["answer"],
+            }
+        except Exception as e:
+            return {
+                "suggested_sql": None,
+                "confidence": 0.0,
+                "message": f"Error generating SQL: {e}",
+            }

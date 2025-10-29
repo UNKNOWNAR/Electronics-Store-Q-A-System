@@ -4,8 +4,9 @@ pandas==2.2.3
 
 # Vector Embeddings and Database
 chromadb==1.2.0
-sentence-transformers==2.2.2
-transformers==4.31.0
+sentence-transformers==2.7.0
+huggingface-hub==0.23.0
+transformers==4.40.1
 torch==2.0.1
 torchvision==0.15.2
 
@@ -15,9 +16,10 @@ SQLAlchemy==2.0.43
 
 # Utilities
 python-dotenv==1.1.1
-numpy==2.2.6
+numpy==1.26.4
 
 # LangChain (if needed for future enhancements)
 langchain
 langchain-google-genai
 langchain-experimental
+langchain-community

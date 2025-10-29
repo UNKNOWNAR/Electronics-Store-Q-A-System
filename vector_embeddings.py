@@ -5,31 +5,32 @@ import json
 from few_shots import few_shots
 import os
 
+# Import from your config file
+from config import VECTOR_DB_CONFIG, SIMILARITY_CONFIG
+
 
 class VectorEmbeddingManager:
-    def __init__(self, db_path="./chroma_db", collection_name="electronics_qa"):
+    def __init__(self):
         """
         Initialize the vector embedding manager with Chroma database
-
-        Args:
-            db_path (str): Path to store the Chroma database
-            collection_name (str): Name of the collection in Chroma
+        (NOW USES CONFIG)
         """
-        self.db_path = db_path
-        self.collection_name = collection_name
+        self.db_path = VECTOR_DB_CONFIG["db_path"]
+        self.collection_name = VECTOR_DB_CONFIG["collection_name"]
+        self.model_name = SIMILARITY_CONFIG["embedding_model"]
 
         # Initialize sentence transformer model for embeddings
-        self.embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+        self.embedding_model = SentenceTransformer(self.model_name)
 
         # Initialize Chroma client
         self.client = chromadb.PersistentClient(
-            path=db_path,
+            path=self.db_path,
             settings=Settings(anonymized_telemetry=False, allow_reset=True),
         )
 
         # Get or create collection
         self.collection = self.client.get_or_create_collection(
-            name=collection_name, metadata={"hnsw:space": "cosine"}
+            name=self.collection_name, metadata={"hnsw:space": "cosine"}
         )
 
     def create_embeddings_from_few_shots(self):
@@ -44,12 +45,9 @@ class VectorEmbeddingManager:
         ids = []
 
         for i, shot in enumerate(few_shots):
-            # Create combined text for embedding (question + SQL query)
-            combined_text = (
-                f"Question: {shot['Question']}\nSQL Query: {shot['SQLQuery']}"
-            )
-
-            documents.append(combined_text)
+            # The document we embed should *only* be the question
+            # to match what the user will search for.
+            documents.append(shot["Question"])
 
             # Create metadata with all information
             metadata = {
@@ -65,7 +63,7 @@ class VectorEmbeddingManager:
             ids.append(f"few_shot_{i}")
 
         # Generate embeddings
-        print("Generating embeddings...")
+        print(f"Generating embeddings using '{self.model_name}'...")
         embeddings = self.embedding_model.encode(documents).tolist()
 
         # Add to Chroma collection
@@ -77,17 +75,21 @@ class VectorEmbeddingManager:
         print(f"Successfully stored {len(documents)} embeddings in Chroma database")
         return len(documents)
 
-    def search_similar_questions(self, query, n_results=3):
+    def search_similar_questions(self, query, n_results=None):
         """
         Search for similar questions in the database
 
         Args:
             query (str): The question to search for
-            n_results (int): Number of similar results to return
+            n_results (int): Number of similar results to return.
+                             Defaults to value from config.
 
         Returns:
             list: List of similar questions with metadata
         """
+        if n_results is None:
+            n_results = SIMILARITY_CONFIG["max_results"]
+
         # Generate embedding for the query
         query_embedding = self.embedding_model.encode([query]).tolist()
 
@@ -127,6 +129,9 @@ def main():
     # Initialize the vector embedding manager
     embedding_manager = VectorEmbeddingManager()
 
+    # Reset collection for a clean start (optional)
+    # embedding_manager.reset_collection()
+
     # Create embeddings from few shots data
     num_embeddings = embedding_manager.create_embeddings_from_few_shots()
 
@@ -149,9 +154,12 @@ def main():
         "How much revenue from Apple products?",
     ]
 
+    # Use default n_results from config
+    n_results = SIMILARITY_CONFIG["max_results"]
+
     for query in test_queries:
         print(f"\nQuery: {query}")
-        results = embedding_manager.search_similar_questions(query, n_results=2)
+        results = embedding_manager.search_similar_questions(query, n_results=n_results)
 
         if results["documents"] and results["documents"][0]:
             for i, (doc, metadata, distance) in enumerate(

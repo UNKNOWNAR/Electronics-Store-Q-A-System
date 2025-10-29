@@ -1,49 +1,19 @@
 import streamlit as st
 import pandas as pd
-from qa_integration import ElectronicsQA
-import psycopg2
-from sqlalchemy import create_engine, text
-import os
-from dotenv import load_dotenv
-import sys
-from urllib.parse import quote_plus
+from qa_integration import ElectronicsQASystem, getDatabaseConnection
+from database_setup import get_sqlalchemy_engine
+from sqlalchemy import text
 
-# Load environment variables
-load_dotenv()
+# Import settings from config.py
+from config import (
+    STREAMLIT_CONFIG,
+    SIMILARITY_CONFIG,
+)
 
-def check_requirements():
-    """Check if required packages are installed"""
-    required_packages = [
-        "streamlit",
-        "pandas",
-        "psycopg2",
-        "sqlalchemy",
-        "langchain",
-        "langchain-google-genai",
-    ]
 
-    missing_packages = []
-    for package in required_packages:
-        try:
-            __import__(package)
-        except ImportError:
-            missing_packages.append(package)
-
-    if missing_packages:
-        st.error("❌ Missing required packages:")
-        for package in missing_packages:
-            st.error(f"   • {package}")
-        st.info("💡 Install missing packages with:")
-        st.code("pip install -r requirements.txt")
-        return False
-
-    return True
-
-# Page configuration
+# Page configuration (now uses STREAMLIT_CONFIG)
 st.set_page_config(
-    page_title="Electronics Store Q&A System",
-    page_icon="🛒",
-    layout="wide",
+    **STREAMLIT_CONFIG,
     initial_sidebar_state="expanded",
 )
 
@@ -97,30 +67,17 @@ st.markdown(
 @st.cache_resource
 def initialize_qa_system():
     """Initialize the Q&A system with caching"""
-    return ElectronicsQA()
+    return ElectronicsQASystem()
 
 
 @st.cache_resource
-def get_database_connection():
-    """Get database connection with caching"""
-    try:
-        # Database connection parameters
-        db_params = {
-            "host": os.getenv("DB_HOST", "localhost"),
-            "database": os.getenv("DB_NAME", "electronics_store"),
-            "user": os.getenv("DB_USER", "postgres"),
-            "password": os.getenv("DB_PASSWORD", "password"),
-            "port": os.getenv("DB_PORT", "5432"),
-        }
-
-        # Create SQLAlchemy engine
-        password = quote_plus(db_params['password'])
-        connection_string = f"postgresql://{db_params['user']}:{password}@{db_params['host']}:{db_params['port']}/{db_params['database']}"
-        engine = create_engine(connection_string)
-        return engine
-    except Exception as e:
-        st.error(f"Database connection failed: {str(e)}")
+def get_cached_sqlalchemy_engine():
+    """Get and cache the SQLAlchemy engine."""
+    engine = get_sqlalchemy_engine()
+    if engine is None:
+        st.error("Failed to get SQLAlchemy engine.")
         return None
+    return engine
 
 
 def execute_sql_query(engine, query):
@@ -150,26 +107,23 @@ def main():
         unsafe_allow_html=True,
     )
 
-    if not check_requirements():
-        st.stop()
-
     # Initialize Q&A system
     with st.spinner("Initializing Q&A System..."):
         qa_system = initialize_qa_system()
 
     # Sidebar
     with st.sidebar:
-
-
         st.header("📊 Database Connection")
-        engine = get_database_connection()
+        engine = get_cached_sqlalchemy_engine()
         if engine:
             st.success("✅ Database Connected")
         else:
             st.error("❌ Database Connection Failed")
 
-
-
+        st.header("🎯 Similarity Threshold")
+        # The threshold is now set in `config.py` and is not user-configurable.
+        threshold = SIMILARITY_CONFIG["default_threshold"]
+        st.info(f"Confidence threshold is set to {threshold:.0%}.")
         st.header("📝 Example Questions")
         example_questions = [
             "How many Samsung phones do we have in stock?",
@@ -205,17 +159,21 @@ def main():
             # Process the question
             with st.spinner("🔍 Finding similar questions and generating SQL..."):
                 # Get SQL suggestion
-                suggestion = qa_system.suggest_sql_query(user_question)
-
-
+                # --- CHANGE ---
+                # We now pass the threshold value from the slider
+                suggestion = qa_system.suggest_sql_query(
+                    user_question, threshold=threshold
+                )
+                # --- END CHANGE ---
 
     with col2:
         st.header("📈 Confidence Score")
         if user_question and "suggestion" in locals():
-            if suggestion["suggested_sql"]:
-                confidence = suggestion["confidence"]
-                st.metric("Match Confidence", f"{confidence:.1%}")
+            # We can now display the confidence even if no SQL was suggested
+            confidence = suggestion["confidence"]
+            st.metric("Match Confidence", f"{confidence:.1%}")
 
+            if suggestion["suggested_sql"]:
                 # Color-coded confidence indicator
                 if confidence >= 0.7:
                     st.success("🟢 High Confidence")
@@ -224,6 +182,7 @@ def main():
                 else:
                     st.error("🔴 Low Confidence")
             else:
+                # This branch now handles low-confidence "garbage" questions
                 st.error("❌ No Match Found")
 
     # Display results
@@ -232,24 +191,22 @@ def main():
 
         if suggestion["suggested_sql"]:
             # Display suggested SQL
-            st.header("💻 SQL Generated by Gemini")
+            st.header("🔍 Found Similar Question")
             st.markdown(
                 f"""
-            <div class="info-box">
-                SQL query generated by the Large Language Model.
+            <div class="success-box">
+                <strong>Original Question:</strong> {suggestion["source_question"]}<br>
+                <strong>Expected Answer:</strong> {suggestion["expected_answer"]}
             </div>
             """,
                 unsafe_allow_html=True,
             )
 
             st.header("💻 Generated SQL Query")
-            st.markdown(
-                f"""
-            <div class="sql-box">
-                {suggestion["suggested_sql"]}
-            </div>
-            """,
-                unsafe_allow_html=True,
+            edited_sql = st.text_area(
+                "You can edit the SQL query below:",
+                value=suggestion["suggested_sql"],
+                height=150,
             )
 
             # Execute SQL if database is connected
@@ -266,7 +223,7 @@ def main():
                 if execute_query:
                     with st.spinner("Executing SQL query..."):
                         df, error = execute_sql_query(
-                            engine, suggestion["suggested_sql"]
+                            engine, edited_sql
                         )
 
                         if df is not None:
@@ -284,19 +241,18 @@ def main():
             else:
                 st.warning("⚠️ Database not connected. Cannot execute SQL queries.")
 
-
         else:
+            # This message now appears when the confidence is below the threshold
             st.markdown(
                 """
             <div class="warning-box">
                 <strong>⚠️ No similar questions found</strong><br>
-                The system couldn't find a similar question in the database.
-                Consider adding more examples to improve matching.
+                The system couldn't find a similar question in the database,
+                or the confidence was below the threshold.
             </div>
             """,
                 unsafe_allow_html=True,
             )
-
 
     # Footer
     st.markdown("---")

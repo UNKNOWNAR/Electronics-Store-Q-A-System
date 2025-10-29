@@ -14,6 +14,7 @@ This LLM-powered application enables natural language interaction with a Postgre
 - **💬 Natural Language Processing**: Ask questions in plain English
 - **💻 SQL Generation**: Automatic SQL query generation from similar examples
 - **📊 Real-time Execution**: Execute queries and view results instantly
+- **✏️ Editable SQL Queries**: Edit and customize the generated SQL queries before execution
 - **🎨 Modern UI**: Beautiful Streamlit interface with confidence scoring
 - **⚡ Fast Search**: Sub-second response times with caching
 
@@ -114,9 +115,9 @@ Electronics-Store-Q-A-System/
 - Use the example questions in the sidebar for quick testing
 - The system will find similar questions and generate SQL
 
-### 2. **View Results**
+### 2. **Review and Edit SQL**
 - See confidence scores for match quality
-- Review generated SQL queries
+- Review and edit the generated SQL query in the text box
 - Execute queries to see actual database results
 - Explore similar questions for reference
 
@@ -142,19 +143,27 @@ Electronics-Store-Q-A-System/
 
 ## 💾 Database Schema
 
-### Products Table
-- `product_id` (Primary Key)
-- `brand` (Apple, Samsung, Dell, HP, Lenovo, etc.)
-- `category` (Laptop, Phone, Tablet, Headphones, etc.)
-- `model_name`
-- `specs` (Storage, RAM, etc.)
-- `price`
-- `stock_quantity`
+```sql
+-- Create the products table
+CREATE TABLE products (
+    product_id SERIAL PRIMARY KEY,
+    brand VARCHAR(50) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    model_name VARCHAR(100) NOT NULL,
+    specs VARCHAR(200),
+    price INT CHECK (price BETWEEN 100 AND 5000),
+    stock_quantity INT NOT NULL,
+    UNIQUE (brand, category, model_name)
+);
 
-### Discounts Table
-- `discount_id` (Primary Key)
-- `product_id` (Foreign Key)
-- `pct_discount`
+-- Create the discounts table
+CREATE TABLE discounts (
+    discount_id SERIAL PRIMARY KEY,
+    product_id INT NOT NULL,
+    pct_discount DECIMAL(5,2) CHECK (pct_discount BETWEEN 0 AND 100),
+    FOREIGN KEY (product_id) REFERENCES products(product_id)
+);
+```
 
 ## 🎯 Example Workflows
 
@@ -213,6 +222,11 @@ python vector_embeddings.py
 # Test database connection
 python database_setup.py
 ```
+
+## ✨ Recent Changes
+
+- **Editable SQL Queries**: Users can now edit the generated SQL query before execution.
+- **Bug Fix**: Fixed a bug where the application would crash due to an incorrect database engine being used.
 
 ## 🛠️ Troubleshooting
 

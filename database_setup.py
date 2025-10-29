@@ -9,6 +9,19 @@ from config import DATABASE_CONFIG
 from urllib.parse import quote_plus
 
 
+def get_sqlalchemy_engine():
+    """
+    Create and return a new SQLAlchemy engine.
+    """
+    try:
+        password = quote_plus(DATABASE_CONFIG['password'])
+        connection_string = f"postgresql://{DATABASE_CONFIG['user']}:{password}@{DATABASE_CONFIG['host']}:{DATABASE_CONFIG['port']}/{DATABASE_CONFIG['database']}"
+        engine = create_engine(connection_string)
+        return engine
+    except Exception as e:
+        print(f"Error creating SQLAlchemy engine: {e}")
+        return None
+
 def test_database_connection():
     """
     Test the database connection and return connection status
